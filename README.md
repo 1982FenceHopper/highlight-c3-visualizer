@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Highlight C3 (Visualizer)
 
-## Getting Started
+This is the Web UI used to display the data aggregated by Highlight C3
 
-First, run the development server:
+### Languages and Frameworks
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 15.0.2
+- TypeScript and TypeScript-JSX
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## About
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Highlight C3 is an experimental project that showcases the potential capabilities of coupling AI and Predictive Analysis Algorithms with static, rudimentary data to understand trends and seasonal changes across various datasets, regardless of environments or scenarios
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+**_NOTE:_** **As of right now, a live webview is not available due to me having to work out many bugs and issues with the project, particularly the algorithms and the LLMs**
 
-## Learn More
+## Parts
 
-To learn more about Next.js, take a look at the following resources:
+This project is separated into three parts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **The Aggregator** - The server that pulls statically available data from the [United Nations Food And Agriculture Organization](https://www.fao.org/home/en) and pulls the spreadsheet dataset to expose in a dynamic API endpoint.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **The Hypothesizer** - The server that exposes a custom endpoint to use AI LLMs via Tool Calling to hypothesize data and trends for an accurate summary of future predictions (Courtesy of [Cloudflare Workers AI](https://www.cloudflare.com/developer-platform/products/workers-ai/)).
 
-## Deploy on Vercel
+3. **The Visualizer [THIS REPO]** - The Web UI that takes data from [1] and puts it in a locally hosted PostgreSQL database for quick referencing and data processing, and displaying it with future predictive data using algorithms, all the while requesting an hypothesis based on current data from [2].
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contributions
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is in an heavy Alpha stage, and numerous bugs and issues need to be sorted out. That being said, any contributions to these aforementioned issues are greatly appreciated. If you wish to contribute, get in touch with me using my socials.
+
+**Discord:** cursedmonolith<br>
+**Instagram:** @1982fencehopper
+
+## License
+
+### This project is under the GNU AGPLv3 license, check `LICENSE` for more details.
