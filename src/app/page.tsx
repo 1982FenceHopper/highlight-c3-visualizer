@@ -16,31 +16,110 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [filteredList, setFilteredList] = useState([]);
   const [list, setList] = useState([]);
+  const [error, setError] = useState<{
+    hasErrored: boolean;
+    errorMessage: string | undefined;
+  }>({ hasErrored: false, errorMessage: undefined });
 
   useEffect(() => {
-    fetch("/api/returnData")
-      .then((res) => {
-        return res.json();
-      })
-      .then((data) => {
-        setList(data.Datasets.Dataset);
+    if (error.hasErrored == true && error.errorMessage != undefined) {
+      toast({
+        title: "An error has occurred.",
+        description: `${error.errorMessage}`,
+        variant: "destructive",
       });
+    }
+  }, [error.hasErrored, error.errorMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const _runner = async () => {
+      const data = await fetch("/api/returnData", { signal })
+        .then((res) => {
+          return res.json();
+        })
+        .then((data) => {
+          return data.Datasets.Dataset;
+        })
+        .catch((err) => {
+          if (err.name === "AbortError") {
+            console.log(
+              "Request to Server on API /api/returnData was aborted by user."
+            );
+          } else if (err != undefined) {
+            console.error(err);
+            setError({
+              hasErrored: true,
+              errorMessage: err,
+            });
+          }
+        });
+
+      setList(data);
+    };
+
+    _runner();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
-    const filtered = list.filter((item: any) => {
-      return item.DatasetCode.toLowerCase().includes(query.toLowerCase());
-    });
-    setFilteredList(filtered);
+    if (list != undefined) {
+      const filtered = list.filter((item: any) => {
+        return item.DatasetCode.toLowerCase().includes(query.toLowerCase());
+      });
+      setFilteredList(filtered);
+    }
   }, [query, list]);
 
   useEffect(() => {
-    fetch("/api/postgresTest")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(data);
-      });
-  }, []);
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const _runner = async () => {
+      const uptime = await fetch("/api/postgresTest", { signal })
+        .then((res) => res.json())
+        .then((data) => {
+          return data.exists;
+        })
+        .catch((err) => {
+          if (err.name === "AbortError") {
+            console.log(
+              "Request to Server on API /api/postgresTest was aborted by user."
+            );
+          } else if (err != undefined) {
+            console.error(err);
+            setError({
+              hasErrored: true,
+              errorMessage: err,
+            });
+          }
+        });
+
+      if (uptime == true) {
+        toast({
+          title: "Database Ready",
+          description: "Local PostgreSQL is online.",
+        });
+      } else {
+        toast({
+          title: "Database Failure",
+          description:
+            "Database has failed to satisfy query, please wait for a minute for the application to automatically rectify itself, if it does not happen, then do not proceed and make a new GitHub Issue.",
+        });
+      }
+    };
+
+    _runner();
+
+    return () => {
+      controller.abort();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="grid p-12">

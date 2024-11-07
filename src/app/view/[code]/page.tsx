@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+//! Keep tryna fix this shit
+
+import { useState, useEffect, use } from "react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -10,12 +12,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 
-export default function Page({ params }: { params: { code: string } }) {
+interface ErrorBoundary {
+  isError: boolean;
+  errorMessage: string;
+}
+
+function isErrorBoundary(obj: any): obj is ErrorBoundary {
+  return (
+    obj && typeof obj === "object" && "isError" in obj && obj.isError === true
+  );
+}
+
+export default function Page({ params }: { params: Promise<any> }) {
+  const resolvedParams = use(params);
+  const resolvedCode = resolvedParams.code;
+
   const { toast } = useToast();
 
   const [query, setQuery] = useState("");
   const [countries, setCountries] = useState([]);
   const [activeFiltered, setActiveFiltered] = useState([]);
+  const [error, setError] = useState<{
+    hasErrored: boolean;
+    errorMessage: string | undefined;
+  }>({ hasErrored: false, errorMessage: undefined });
 
   useEffect(() => {
     toast({
@@ -26,6 +46,16 @@ export default function Page({ params }: { params: { code: string } }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (error.hasErrored == true && error.errorMessage != undefined) {
+      toast({
+        title: "An error has occurred.",
+        description: `${error.errorMessage}`,
+        variant: "destructive",
+      });
+    }
+  }, [error.hasErrored, error.errorMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const filtered = countries.filter((item: any) => {
       return item.country.toLowerCase().includes(query.toLowerCase());
     });
@@ -33,21 +63,117 @@ export default function Page({ params }: { params: { code: string } }) {
   }, [query, countries]);
 
   useEffect(() => {
-    fetch(`/api/returnDatasetCSVContent?code=${params.code}`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(data);
-        fetch(`/api/returnCountries?code=${params.code}`)
+    const controllers: AbortController[] = [];
+
+    // fetch(`/api/returnDatasetCSVContent?code=${params.code}`, { signal })
+    //   .then((res) => res.json())
+    //   .then((data) => {
+    //     console.log(data);
+    //     fetch(`/api/returnCountries?code=${params.code}`, { signal })
+    //       .then((res) => res.json())
+    //       .then((data) => {
+    //         setCountries(data);
+    //       })
+    //       .then((err: any) => {
+    //         if (err.name == "AbortError") {
+    //           console.log(
+    //             "Request to Server on API /api/returnCountries was aborted by user."
+    //           );
+    //         } else {
+    //           setError({
+    //             hasErrored: true,
+    //             errorMessage: err,
+    //           });
+    //         }
+    //       });
+    //   })
+    //   .catch((err: any) => {
+    //     if (err.name == "AbortError") {
+    //       console.log(
+    //         "Request to Server on API /api/returnDatasetCSVContent was aborted by user."
+    //       );
+    //     } else {
+    //       setError({
+    //         hasErrored: true,
+    //         errorMessage: err,
+    //       });
+    //     }
+    //   });
+
+    const runner = async () => {
+      const csv_fetch_ctr: AbortController = new AbortController();
+      controllers.push(csv_fetch_ctr);
+
+      const ds_csv = await fetch(
+        `/api/returnDatasetCSVContent?code=${resolvedCode}`,
+        { signal: csv_fetch_ctr.signal }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          return data;
+        })
+        .catch((err) => {
+          if (err.name === "AbortError") {
+            console.log(
+              "Request to Server on API /api/returnDatasetCSVContent was aborted by user."
+            );
+            return { isError: true, errorMessage: err } as ErrorBoundary;
+          } else if (err !== undefined) {
+            console.error(err);
+            setError({
+              hasErrored: true,
+              errorMessage: err,
+            });
+            return { isError: true, errorMessage: err } as ErrorBoundary;
+          }
+        });
+
+      if (!isErrorBoundary(ds_csv)) {
+        console.log(ds_csv);
+
+        const country_fetch_ctr: AbortController = new AbortController();
+        controllers.push(country_fetch_ctr);
+
+        const country_data = await fetch(
+          `/api/returnCountries?code=${resolvedCode}`,
+          { signal: country_fetch_ctr.signal }
+        )
           .then((res) => res.json())
           .then((data) => {
-            setCountries(data);
+            return data;
+          })
+          .catch((err) => {
+            if (err.name === "AbortError") {
+              console.log(
+                "Request to Server on API /api/returnCountries was aborted by user."
+              );
+              return { isError: true, errorMessage: err } as ErrorBoundary;
+            } else if (err !== undefined) {
+              console.error(err);
+              setError({
+                hasErrored: true,
+                errorMessage: err,
+              });
+              return { isError: true, errorMessage: err } as ErrorBoundary;
+            }
           });
-      });
-  }, [params.code]);
+
+        if (!isErrorBoundary(country_data)) {
+          setCountries(country_data);
+        }
+      }
+    };
+
+    runner();
+
+    return () => {
+      controllers.forEach((ctr: AbortController) => ctr.abort());
+    };
+  }, [resolvedCode]);
 
   return (
     <div className="grid p-12">
-      <div className="font-bold text-3xl">FAOSTAT Dataset: {params.code}</div>
+      <div className="font-bold text-3xl">FAOSTAT Dataset: {resolvedCode}</div>
       <div className="mt-2 min-w-screen border-[1px] rounded-full border-[#1f1f1f]" />
       <Input
         className="mt-4"
@@ -78,7 +204,7 @@ export default function Page({ params }: { params: { code: string } }) {
                 }}
                 asChild
               >
-                <Link href={`/view/${params.code}/${country.country}`}>
+                <Link href={`/view/${resolvedCode}/${country.country}`}>
                   View
                 </Link>
               </Button>
