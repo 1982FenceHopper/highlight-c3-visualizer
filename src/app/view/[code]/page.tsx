@@ -220,7 +220,7 @@ export default function Page({ params }: { params: Promise<any> }) {
         )}
       </ScrollArea>
       <div className="absolute flex top-[98%] -translate-y-[98%] text-sm text-[#3f3f3f]">
-        Copyright 2024 W/L Foundation
+        Copyright 2024 Nashat Yafi, W/L Foundations
       </div>
     </div>
   );
